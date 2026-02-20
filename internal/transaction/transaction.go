@@ -24,6 +24,18 @@ func fromSqlc(t sqlc.Transaction) TransactionData {
 	}
 }
 
+func GetAll(db *sql.DB) ([]TransactionData, error) {
+	rows, err := sqlc.New(db).GetAllTransactions(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	result := make([]TransactionData, len(rows))
+	for i, r := range rows {
+		result[i] = fromSqlc(r)
+	}
+	return result, nil
+}
+
 func GetByAccount(db *sql.DB, accountId int64) ([]TransactionData, error) {
 	rows, err := sqlc.New(db).GetTransactionsByAccount(context.Background(), accountId)
 	if err != nil {

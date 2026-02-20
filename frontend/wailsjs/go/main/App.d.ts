@@ -22,6 +22,8 @@ export function DeleteTransaction(arg1:number):Promise<void>;
 
 export function GetAccounts():Promise<Array<account.AccountData>>;
 
+export function GetAllTransactions():Promise<Array<transaction.TransactionData>>;
+
 export function GetCategories(arg1:string):Promise<Array<string>>;
 
 export function GetDebts():Promise<Array<debt.DebtData>>;

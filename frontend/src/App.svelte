@@ -6,9 +6,11 @@
     import AccountModal from './lib/AccountModal.svelte';
     import DebtModal from './lib/DebtModal.svelte';
     import Settings from './lib/Settings.svelte';
-    import { accounts, debts, debtRemaining, addAccount, addDebt, updateAccount, updateDebt, deleteAccount, deleteDebt, loadAccounts, loadDebts, loadCategories, formatRupiah } from './lib/stores';
+    import TimelineGlobal from './lib/TimelineGlobal.svelte';
+    import { accounts, debts, debtRemaining, addAccount, addDebt, updateAccount, updateDebt, deleteAccount, deleteDebt, loadAccounts, loadDebts, loadAllTransactions, loadCategories, formatRupiah } from './lib/stores';
     import type { Account } from './lib/stores';
 
+    let activeTab: 'overview' | 'timeline' = 'overview';
     let activeView: 'transactions' | 'debts' = 'transactions';
     let selectedItem = '';
     let selectedId: number = 0;
@@ -35,8 +37,13 @@
     let renameName = '';
 
     onMount(async () => {
-        await Promise.all([loadAccounts(), loadDebts(), loadCategories()]);
+        await Promise.all([loadAccounts(), loadDebts(), loadAllTransactions(), loadCategories()]);
     });
+
+    // Lazy refresh when switching to timeline tab
+    $: if (activeTab === 'timeline') {
+        loadAllTransactions();
+    }
 
     function handleSelect(e: CustomEvent<{ section: string; item: string; id: number }>) {
         selectedItem = e.detail.item;
@@ -129,21 +136,39 @@
 </script>
 
 <div class="flex flex-col h-full text-[#e0e0e0]">
-    {#if showSettings}
-        <div class="flex flex-1 min-h-0">
-            <Settings on:close={() => showSettings = false} />
-        </div>
+    <!-- Tab bar -->
+    <div class="flex bg-[#111] border-b border-[#222] shrink-0">
+        <button
+            class="px-4 py-1.5 text-xs tracking-wider border-none cursor-pointer transition-colors
+            {activeTab === 'overview' ? 'bg-[#1a1a1a] text-[#ff8c00] border-b-2 border-b-[#ff8c00]' : 'bg-transparent text-[#888] hover:text-[#e0e0e0]'}"
+            on:click={() => activeTab = 'overview'}
+        >OVERVIEW</button>
+        <button
+            class="px-4 py-1.5 text-xs tracking-wider border-none cursor-pointer transition-colors
+            {activeTab === 'timeline' ? 'bg-[#1a1a1a] text-[#ff8c00] border-b-2 border-b-[#ff8c00]' : 'bg-transparent text-[#888] hover:text-[#e0e0e0]'}"
+            on:click={() => activeTab = 'timeline'}
+        >TIMELINE</button>
+    </div>
+
+    {#if activeTab === 'overview'}
+        {#if showSettings}
+            <div class="flex flex-1 min-h-0">
+                <Settings on:close={() => showSettings = false} />
+            </div>
+        {:else}
+            <div class="flex flex-1 min-h-0">
+                <Sidebar on:select={handleSelect} on:addAccount={openCreate} on:addDebt={() => showDebtModal = true} on:rename={handleContextRename} on:delete={handleContextDelete} on:settings={() => showSettings = true} bind:selectedId />
+                {#if activeView === 'debts' && selectedId}
+                    <DebtDetail debtId={selectedId} />
+                {:else if selectedId}
+                    <Timeline accountId={selectedId} accountName={selectedItem} />
+                {:else}
+                    <div class="flex-1 flex items-center justify-center text-[#555] text-xs">Select an account</div>
+                {/if}
+            </div>
+        {/if}
     {:else}
-        <div class="flex flex-1 min-h-0">
-            <Sidebar on:select={handleSelect} on:addAccount={openCreate} on:addDebt={() => showDebtModal = true} on:rename={handleContextRename} on:delete={handleContextDelete} on:settings={() => showSettings = true} bind:selectedId />
-            {#if activeView === 'debts' && selectedId}
-                <DebtDetail debtId={selectedId} />
-            {:else if selectedId}
-                <Timeline accountId={selectedId} accountName={selectedItem} />
-            {:else}
-                <div class="flex-1 flex items-center justify-center text-[#555] text-xs">Select an account</div>
-            {/if}
-        </div>
+        <TimelineGlobal />
     {/if}
 
     <!-- Status Bar -->
@@ -152,7 +177,7 @@
         <div class="px-3 py-1 border-r border-[#222] text-[#888]">BAL <span class="text-[#33cc33]">{formatRupiah(totalBalance)}</span></div>
         <div class="px-3 py-1 border-r border-[#222] text-[#888]">DEBT <span class="text-[#cc3333]">{formatRupiah(Math.abs(totalDebt))}</span></div>
         <div class="px-3 py-1 text-[#888]">NET <span class="{net < 0 ? 'text-[#cc3333]' : 'text-[#33cc33]'} font-bold">{formatRupiah(net)}</span></div>
-        <div class="ml-auto px-3 py-1 text-[#555]">v1.0.2</div>
+        <div class="ml-auto px-3 py-1 text-[#555]">v1.1.0</div>
     </div>
 </div>
 

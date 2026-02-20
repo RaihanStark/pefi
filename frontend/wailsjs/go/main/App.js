@@ -38,6 +38,10 @@ export function GetAccounts() {
   return window['go']['main']['App']['GetAccounts']();
 }
 
+export function GetAllTransactions() {
+  return window['go']['main']['App']['GetAllTransactions']();
+}
+
 export function GetCategories(arg1) {
   return window['go']['main']['App']['GetCategories'](arg1);
 }

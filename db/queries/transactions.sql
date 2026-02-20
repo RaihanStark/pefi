@@ -1,3 +1,7 @@
+-- name: GetAllTransactions :many
+SELECT id, account_id, date, name, amount, category, notes
+FROM transactions ORDER BY date DESC, id DESC;
+
 -- name: GetTransactionsByAccount :many
 SELECT id, account_id, date, name, amount, category, notes
 FROM transactions WHERE account_id = ? ORDER BY date DESC, id DESC;

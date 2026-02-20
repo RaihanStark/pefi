@@ -11,6 +11,7 @@ import {
     AddCategory as GoAddCategory,
     RenameCategory as GoRenameCategory,
     DeleteCategory as GoDeleteCategory,
+    GetAllTransactions,
     GetDebts,
     CreateDebt as GoCreateDebt,
     UpdateDebt as GoUpdateDebt,
@@ -166,6 +167,59 @@ export async function updateDebt(id: number, data: Partial<Omit<Debt, 'id'>>) {
 export async function deleteDebt(id: number) {
     await GoDeleteDebt(id);
     await loadDebts();
+}
+
+// Global timeline
+
+export const allTransactions = writable<Transaction[]>([]);
+
+export async function loadAllTransactions() {
+    const data = await GetAllTransactions();
+    allTransactions.set((data ?? []) as Transaction[]);
+}
+
+export interface TimelineEntry {
+    id: string;
+    date: string;
+    description: string;
+    amount: number;
+    source: string;
+    sourceType: 'account' | 'debt';
+    category: string;
+    status?: string;
+}
+
+export function buildTimelineEntries(
+    txs: Transaction[],
+    accts: Account[],
+    debtList: Debt[],
+): TimelineEntry[] {
+    const acctMap = new Map(accts.map(a => [a.id, a.name]));
+
+    const txEntries: TimelineEntry[] = txs.map(t => ({
+        id: `tx-${t.id}`,
+        date: t.date,
+        description: t.name,
+        amount: t.amount,
+        source: acctMap.get(t.accountId) ?? 'Unknown',
+        sourceType: 'account' as const,
+        category: t.category,
+    }));
+
+    const instEntries: TimelineEntry[] = debtList.flatMap(d =>
+        d.installments.map((inst, idx) => ({
+            id: `inst-${d.id}-${idx}`,
+            date: inst.dueDate,
+            description: `Installment #${idx + 1}`,
+            amount: -inst.amount,
+            source: d.name,
+            sourceType: 'debt' as const,
+            category: 'Installment',
+            status: inst.status,
+        }))
+    );
+
+    return [...txEntries, ...instEntries].sort((a, b) => b.date.localeCompare(a.date));
 }
 
 export function formatRupiah(amount: number): string {

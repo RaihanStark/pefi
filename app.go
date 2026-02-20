@@ -62,6 +62,10 @@ func (a *App) DeleteAccount(id int64) error {
 
 // Transactions
 
+func (a *App) GetAllTransactions() ([]transaction.TransactionData, error) {
+	return transaction.GetAll(a.conn)
+}
+
 func (a *App) GetTransactions(accountId int64) ([]transaction.TransactionData, error) {
 	return transaction.GetByAccount(a.conn, accountId)
 }
