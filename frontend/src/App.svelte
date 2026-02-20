@@ -2,10 +2,11 @@
     import { onMount } from 'svelte';
     import Sidebar from './lib/Sidebar.svelte';
     import Timeline from './lib/Timeline.svelte';
-    import DebtList from './lib/DebtList.svelte';
+    import DebtDetail from './lib/DebtDetail.svelte';
     import AccountModal from './lib/AccountModal.svelte';
+    import DebtModal from './lib/DebtModal.svelte';
     import Settings from './lib/Settings.svelte';
-    import { accounts, addAccount, updateAccount, deleteAccount, loadAccounts, loadCategories, formatRupiah } from './lib/stores';
+    import { accounts, debts, debtRemaining, addAccount, addDebt, updateAccount, deleteAccount, loadAccounts, loadCategories, formatRupiah } from './lib/stores';
     import type { Account } from './lib/stores';
 
     let activeView: 'transactions' | 'debts' = 'transactions';
@@ -16,6 +17,9 @@
     let showModal = false;
     let modalMode: 'create' | 'edit' = 'create';
     let editingAccount: Account | null = null;
+
+    // Debt modal
+    let showDebtModal = false;
 
     // Confirm delete
     let showDeleteConfirm = false;
@@ -66,6 +70,14 @@
         editingAccount = null;
     }
 
+    function handleDebtSave(e: CustomEvent<{ name: string }>) {
+        const id = addDebt(e.detail.name);
+        selectedId = id;
+        selectedItem = e.detail.name;
+        activeView = 'debts';
+        showDebtModal = false;
+    }
+
     function handleContextDelete(e: CustomEvent<{ id: number; name: string }>) {
         deleteTargetId = e.detail.id;
         deleteTargetName = e.detail.name;
@@ -96,8 +108,8 @@
     }
 
     $: totalBalance = $accounts.filter(a => a.type === 'bank').reduce((s, a) => s + a.balance, 0);
-    $: totalDebt = $accounts.filter(a => a.type === 'debt').reduce((s, a) => s + a.balance, 0);
-    $: net = totalBalance + totalDebt;
+    $: totalDebt = $debts.reduce((s, d) => s + debtRemaining(d), 0);
+    $: net = totalBalance - totalDebt;
     $: acctCount = $accounts.length;
 </script>
 
@@ -108,9 +120,9 @@
         </div>
     {:else}
         <div class="flex flex-1 min-h-0">
-            <Sidebar on:select={handleSelect} on:add={openCreate} on:rename={handleContextRename} on:delete={handleContextDelete} on:settings={() => showSettings = true} bind:selectedId />
-            {#if activeView === 'debts'}
-                <DebtList account={selectedItem} />
+            <Sidebar on:select={handleSelect} on:addAccount={openCreate} on:addDebt={() => showDebtModal = true} on:rename={handleContextRename} on:delete={handleContextDelete} on:settings={() => showSettings = true} bind:selectedId />
+            {#if activeView === 'debts' && selectedId}
+                <DebtDetail debtId={selectedId} />
             {:else if selectedId}
                 <Timeline accountId={selectedId} accountName={selectedItem} />
             {:else}
@@ -135,6 +147,14 @@
         account={editingAccount}
         on:save={handleSave}
         on:close={() => { showModal = false; editingAccount = null; }}
+    />
+{/if}
+
+<!-- Debt Modal -->
+{#if showDebtModal}
+    <DebtModal
+        on:save={handleDebtSave}
+        on:close={() => showDebtModal = false}
     />
 {/if}
 

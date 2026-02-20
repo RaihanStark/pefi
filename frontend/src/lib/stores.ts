@@ -1,4 +1,4 @@
-import { writable, derived } from 'svelte/store';
+import { writable } from 'svelte/store';
 import {
     GetAccounts,
     CreateAccount as GoCreateAccount,
@@ -36,19 +36,12 @@ export const transactions = writable<Transaction[]>([]);
 export const expenseCategories = writable<string[]>([]);
 export const incomeCategories = writable<string[]>([]);
 
-export const bankAccounts = derived(accounts, $a => $a.filter(a => a.type === 'bank'));
-export const debtAccounts = derived(accounts, $a => $a.filter(a => a.type === 'debt'));
-
-// Debt ID counter for in-memory debt accounts
-let nextDebtId = -1;
+export const bankAccounts = accounts;
 
 // Load functions
 export async function loadAccounts() {
     const data = await GetAccounts();
-    accounts.update(current => {
-        const debts = current.filter(a => a.type === 'debt');
-        return [...data as Account[], ...debts];
-    });
+    accounts.set(data as Account[]);
 }
 
 export async function loadTransactions(accountId: number) {
@@ -70,21 +63,11 @@ export async function loadCategories() {
 
 // Account CRUD
 export async function addAccount(name: string, type: 'bank' | 'debt', balance: number) {
-    if (type === 'debt') {
-        accounts.update(list => [...list, { id: nextDebtId--, name, type, balance }]);
-        return;
-    }
     const acc = await GoCreateAccount(name, type, balance);
     accounts.update(list => [...list, acc as Account]);
 }
 
 export async function updateAccount(id: number, data: Partial<Omit<Account, 'id'>>) {
-    if (id < 0) {
-        // In-memory debt account
-        accounts.update(list => list.map(a => a.id === id ? { ...a, ...data } : a));
-        return;
-    }
-    // Need full values for the Go call
     let current: Account | undefined;
     accounts.subscribe(list => { current = list.find(a => a.id === id); })();
     if (!current) return;
@@ -96,10 +79,6 @@ export async function updateAccount(id: number, data: Partial<Omit<Account, 'id'
 }
 
 export async function deleteAccount(id: number) {
-    if (id < 0) {
-        accounts.update(list => list.filter(a => a.id !== id));
-        return;
-    }
     await GoDeleteAccount(id);
     accounts.update(list => list.filter(a => a.id !== id));
     transactions.update(list => list.filter(t => t.accountId !== id));
@@ -137,6 +116,111 @@ export async function deleteCategory(type: 'expense' | 'income', name: string) {
     await GoDeleteCategory(type, name);
     const store = type === 'expense' ? expenseCategories : incomeCategories;
     store.update(list => list.filter(c => c !== name));
+}
+
+// Debts (mock, in-memory)
+let nextDebtId = 100;
+
+export interface Installment {
+    dueDate: string;
+    amount: number;
+    status: 'paid' | 'upcoming' | 'overdue';
+    paidDate?: string;
+}
+
+export interface Debt {
+    id: number;
+    name: string;
+    amount: number;
+    notes: string;
+    installments: Installment[];
+}
+
+export function debtPaid(d: Debt): number {
+    return d.installments.filter(i => i.status === 'paid').reduce((s, i) => s + i.amount, 0);
+}
+
+export function debtRemaining(d: Debt): number {
+    return d.amount - debtPaid(d);
+}
+
+export const debts = writable<Debt[]>([
+    {
+        id: 1, name: 'Andi', amount: 5000000,
+        notes: 'Personal loan, no interest',
+        installments: [
+            { dueDate: '2025-11-01', amount: 1000000, status: 'paid', paidDate: '2025-11-05' },
+            { dueDate: '2025-12-01', amount: 1000000, status: 'paid', paidDate: '2025-12-02' },
+            { dueDate: '2026-01-01', amount: 1000000, status: 'paid', paidDate: '2026-01-03' },
+            { dueDate: '2026-02-01', amount: 1000000, status: 'upcoming' },
+            { dueDate: '2026-03-01', amount: 1000000, status: 'upcoming' },
+        ],
+    },
+    {
+        id: 2, name: 'Budi', amount: 8000000,
+        notes: 'Business loan',
+        installments: [
+            { dueDate: '2026-01-15', amount: 2000000, status: 'paid', paidDate: '2026-01-15' },
+            { dueDate: '2026-02-15', amount: 2000000, status: 'overdue' },
+            { dueDate: '2026-03-15', amount: 2000000, status: 'upcoming' },
+            { dueDate: '2026-04-15', amount: 2000000, status: 'upcoming' },
+        ],
+    },
+    {
+        id: 3, name: 'Citra', amount: 7500000,
+        notes: 'Emergency fund',
+        installments: [
+            { dueDate: '2026-02-01', amount: 2500000, status: 'upcoming' },
+            { dueDate: '2026-03-01', amount: 2500000, status: 'upcoming' },
+            { dueDate: '2026-04-01', amount: 2500000, status: 'upcoming' },
+        ],
+    },
+    {
+        id: 4, name: 'Dewi', amount: 6000000,
+        notes: 'Almost done',
+        installments: [
+            { dueDate: '2025-10-01', amount: 1500000, status: 'paid', paidDate: '2025-10-01' },
+            { dueDate: '2025-11-01', amount: 1500000, status: 'paid', paidDate: '2025-11-03' },
+            { dueDate: '2025-12-01', amount: 1500000, status: 'paid', paidDate: '2025-12-01' },
+            { dueDate: '2026-01-01', amount: 1500000, status: 'overdue' },
+        ],
+    },
+    {
+        id: 5, name: 'Eka', amount: 4500000,
+        notes: '',
+        installments: [
+            { dueDate: '2026-01-01', amount: 1500000, status: 'paid', paidDate: '2026-01-05' },
+            { dueDate: '2026-02-01', amount: 1500000, status: 'upcoming' },
+            { dueDate: '2026-03-01', amount: 1500000, status: 'upcoming' },
+        ],
+    },
+    {
+        id: 6, name: 'Fajar', amount: 4000000,
+        notes: '',
+        installments: [
+            { dueDate: '2026-03-10', amount: 1000000, status: 'upcoming' },
+            { dueDate: '2026-04-10', amount: 1000000, status: 'upcoming' },
+            { dueDate: '2026-05-10', amount: 1000000, status: 'upcoming' },
+            { dueDate: '2026-06-10', amount: 1000000, status: 'upcoming' },
+        ],
+    },
+]);
+
+export function addDebt(name: string): number {
+    const id = nextDebtId++;
+    debts.update(list => [...list, {
+        id, name, amount: 0,
+        notes: '', installments: [],
+    }]);
+    return id;
+}
+
+export function updateDebt(id: number, data: Partial<Omit<Debt, 'id'>>) {
+    debts.update(list => list.map(d => d.id === id ? { ...d, ...data } : d));
+}
+
+export function deleteDebt(id: number) {
+    debts.update(list => list.filter(d => d.id !== id));
 }
 
 export function formatRupiah(amount: number): string {

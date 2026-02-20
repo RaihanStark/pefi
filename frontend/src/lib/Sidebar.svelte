@@ -1,10 +1,11 @@
 <script lang="ts">
     import { createEventDispatcher } from 'svelte';
-    import { bankAccounts, debtAccounts, formatRupiah } from './stores';
+    import { bankAccounts, debts, debtRemaining, formatRupiah } from './stores';
 
     const dispatch = createEventDispatcher<{
         select: { section: string; item: string; id: number };
-        add: void;
+        addAccount: void;
+        addDebt: void;
         rename: { id: number; name: string };
         delete: { id: number; name: string };
         settings: void;
@@ -66,7 +67,11 @@
 
     function getItems(key: string) {
         if (key === 'Bank Accounts') return $bankAccounts;
-        if (key === 'Debts') return $debtAccounts;
+        if (key === 'Debts') return $debts.map(d => ({
+            id: d.id,
+            name: d.name,
+            balance: -debtRemaining(d),
+        }));
         return [];
     }
 </script>
@@ -75,12 +80,8 @@
 
 <div class="bg-[#111] flex shrink-0 relative" style="width: {width}px">
     <div class="flex flex-col flex-1 min-w-0 border-r border-[#222]">
-        <div class="bg-[#1a1a1a] flex items-center justify-between px-3 py-1 border-b border-[#222]">
+        <div class="bg-[#1a1a1a] flex items-center px-3 py-1 border-b border-[#222]">
             <span class="text-[#ff8c00] font-bold text-xs tracking-wider">ACCOUNTS</span>
-            <button
-                class="bg-transparent border-none text-[#555] hover:text-[#ff8c00] cursor-pointer text-sm leading-none transition-colors"
-                on:click={() => dispatch('add')}
-            >+</button>
         </div>
         <div class="flex-1 overflow-y-auto">
             {#each sections as section, si}
@@ -103,6 +104,12 @@
                             <span class="font-mono {item.balance < 0 ? 'text-[#cc3333]' : 'text-[#33cc33]'}">{formatRupiah(item.balance)}</span>
                         </button>
                     {/each}
+                    <button
+                        class="flex items-center w-full text-left border-none cursor-pointer py-1 pl-6 pr-3 transition-colors text-xs text-[#555] hover:text-[#ff8c00] bg-transparent border-l-2 border-l-transparent"
+                        on:click={() => dispatch(section.key === 'Bank Accounts' ? 'addAccount' : 'addDebt')}
+                    >
+                        <span>+ {section.key === 'Bank Accounts' ? 'New Bank Account' : 'New Debt'}</span>
+                    </button>
                 {/if}
             {/each}
         </div>
