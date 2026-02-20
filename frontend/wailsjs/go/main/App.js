@@ -10,6 +10,10 @@ export function CreateAccount(arg1, arg2, arg3) {
   return window['go']['main']['App']['CreateAccount'](arg1, arg2, arg3);
 }
 
+export function CreateDebt(arg1) {
+  return window['go']['main']['App']['CreateDebt'](arg1);
+}
+
 export function CreateTransaction(arg1, arg2, arg3, arg4, arg5, arg6) {
   return window['go']['main']['App']['CreateTransaction'](arg1, arg2, arg3, arg4, arg5, arg6);
 }
@@ -20,6 +24,10 @@ export function DeleteAccount(arg1) {
 
 export function DeleteCategory(arg1, arg2) {
   return window['go']['main']['App']['DeleteCategory'](arg1, arg2);
+}
+
+export function DeleteDebt(arg1) {
+  return window['go']['main']['App']['DeleteDebt'](arg1);
 }
 
 export function DeleteTransaction(arg1) {
@@ -34,6 +42,10 @@ export function GetCategories(arg1) {
   return window['go']['main']['App']['GetCategories'](arg1);
 }
 
+export function GetDebts() {
+  return window['go']['main']['App']['GetDebts']();
+}
+
 export function GetTransactions(arg1) {
   return window['go']['main']['App']['GetTransactions'](arg1);
 }
@@ -44,4 +56,8 @@ export function RenameCategory(arg1, arg2, arg3) {
 
 export function UpdateAccount(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['UpdateAccount'](arg1, arg2, arg3, arg4);
+}
+
+export function UpdateDebt(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['UpdateDebt'](arg1, arg2, arg3, arg4, arg5);
 }

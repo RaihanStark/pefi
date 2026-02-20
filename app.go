@@ -7,6 +7,7 @@ import (
 
 	"pefi/internal/account"
 	"pefi/internal/category"
+	"pefi/internal/debt"
 	db "pefi/internal/db"
 	"pefi/internal/transaction"
 )
@@ -89,4 +90,22 @@ func (a *App) RenameCategory(typ, oldName, newName string) error {
 
 func (a *App) DeleteCategory(typ, name string) error {
 	return category.Delete(a.conn, typ, name)
+}
+
+// Debts
+
+func (a *App) GetDebts() ([]debt.DebtData, error) {
+	return debt.GetAll(a.conn)
+}
+
+func (a *App) CreateDebt(name string) (debt.DebtData, error) {
+	return debt.Create(a.conn, name)
+}
+
+func (a *App) UpdateDebt(id int64, name string, amount int64, notes string, installments []debt.InstallmentData) error {
+	return debt.Update(a.conn, id, name, amount, notes, installments)
+}
+
+func (a *App) DeleteDebt(id int64) error {
+	return debt.Delete(a.conn, id)
 }

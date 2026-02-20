@@ -6,7 +6,7 @@
     import AccountModal from './lib/AccountModal.svelte';
     import DebtModal from './lib/DebtModal.svelte';
     import Settings from './lib/Settings.svelte';
-    import { accounts, debts, debtRemaining, addAccount, addDebt, updateAccount, deleteAccount, loadAccounts, loadCategories, formatRupiah } from './lib/stores';
+    import { accounts, debts, debtRemaining, addAccount, addDebt, updateAccount, deleteAccount, loadAccounts, loadDebts, loadCategories, formatRupiah } from './lib/stores';
     import type { Account } from './lib/stores';
 
     let activeView: 'transactions' | 'debts' = 'transactions';
@@ -35,7 +35,7 @@
     let renameName = '';
 
     onMount(async () => {
-        await Promise.all([loadAccounts(), loadCategories()]);
+        await Promise.all([loadAccounts(), loadDebts(), loadCategories()]);
     });
 
     function handleSelect(e: CustomEvent<{ section: string; item: string; id: number }>) {
@@ -70,8 +70,8 @@
         editingAccount = null;
     }
 
-    function handleDebtSave(e: CustomEvent<{ name: string }>) {
-        const id = addDebt(e.detail.name);
+    async function handleDebtSave(e: CustomEvent<{ name: string }>) {
+        const id = await addDebt(e.detail.name);
         selectedId = id;
         selectedItem = e.detail.name;
         activeView = 'debts';

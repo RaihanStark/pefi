@@ -11,6 +11,10 @@ import {
     AddCategory as GoAddCategory,
     RenameCategory as GoRenameCategory,
     DeleteCategory as GoDeleteCategory,
+    GetDebts,
+    CreateDebt as GoCreateDebt,
+    UpdateDebt as GoUpdateDebt,
+    DeleteDebt as GoDeleteDebt,
 } from '../../wailsjs/go/main/App';
 
 export interface Account {
@@ -118,8 +122,7 @@ export async function deleteCategory(type: 'expense' | 'income', name: string) {
     store.update(list => list.filter(c => c !== name));
 }
 
-// Debts (mock, in-memory)
-let nextDebtId = 100;
+// Debts
 
 export interface Installment {
     dueDate: string;
@@ -144,82 +147,31 @@ export function debtRemaining(d: Debt): number {
     return d.amount - debtPaid(d);
 }
 
-export const debts = writable<Debt[]>([
-    {
-        id: 1, name: 'Andi', amount: 5000000,
-        notes: 'Personal loan, no interest',
-        installments: [
-            { dueDate: '2025-11-01', amount: 1000000, status: 'paid', paidDate: '2025-11-05' },
-            { dueDate: '2025-12-01', amount: 1000000, status: 'paid', paidDate: '2025-12-02' },
-            { dueDate: '2026-01-01', amount: 1000000, status: 'paid', paidDate: '2026-01-03' },
-            { dueDate: '2026-02-01', amount: 1000000, status: 'upcoming' },
-            { dueDate: '2026-03-01', amount: 1000000, status: 'upcoming' },
-        ],
-    },
-    {
-        id: 2, name: 'Budi', amount: 8000000,
-        notes: 'Business loan',
-        installments: [
-            { dueDate: '2026-01-15', amount: 2000000, status: 'paid', paidDate: '2026-01-15' },
-            { dueDate: '2026-02-15', amount: 2000000, status: 'overdue' },
-            { dueDate: '2026-03-15', amount: 2000000, status: 'upcoming' },
-            { dueDate: '2026-04-15', amount: 2000000, status: 'upcoming' },
-        ],
-    },
-    {
-        id: 3, name: 'Citra', amount: 7500000,
-        notes: 'Emergency fund',
-        installments: [
-            { dueDate: '2026-02-01', amount: 2500000, status: 'upcoming' },
-            { dueDate: '2026-03-01', amount: 2500000, status: 'upcoming' },
-            { dueDate: '2026-04-01', amount: 2500000, status: 'upcoming' },
-        ],
-    },
-    {
-        id: 4, name: 'Dewi', amount: 6000000,
-        notes: 'Almost done',
-        installments: [
-            { dueDate: '2025-10-01', amount: 1500000, status: 'paid', paidDate: '2025-10-01' },
-            { dueDate: '2025-11-01', amount: 1500000, status: 'paid', paidDate: '2025-11-03' },
-            { dueDate: '2025-12-01', amount: 1500000, status: 'paid', paidDate: '2025-12-01' },
-            { dueDate: '2026-01-01', amount: 1500000, status: 'overdue' },
-        ],
-    },
-    {
-        id: 5, name: 'Eka', amount: 4500000,
-        notes: '',
-        installments: [
-            { dueDate: '2026-01-01', amount: 1500000, status: 'paid', paidDate: '2026-01-05' },
-            { dueDate: '2026-02-01', amount: 1500000, status: 'upcoming' },
-            { dueDate: '2026-03-01', amount: 1500000, status: 'upcoming' },
-        ],
-    },
-    {
-        id: 6, name: 'Fajar', amount: 4000000,
-        notes: '',
-        installments: [
-            { dueDate: '2026-03-10', amount: 1000000, status: 'upcoming' },
-            { dueDate: '2026-04-10', amount: 1000000, status: 'upcoming' },
-            { dueDate: '2026-05-10', amount: 1000000, status: 'upcoming' },
-            { dueDate: '2026-06-10', amount: 1000000, status: 'upcoming' },
-        ],
-    },
-]);
+export const debts = writable<Debt[]>([]);
 
-export function addDebt(name: string): number {
-    const id = nextDebtId++;
-    debts.update(list => [...list, {
-        id, name, amount: 0,
-        notes: '', installments: [],
-    }]);
-    return id;
+export async function loadDebts() {
+    const data = await GetDebts();
+    debts.set((data ?? []) as Debt[]);
 }
 
-export function updateDebt(id: number, data: Partial<Omit<Debt, 'id'>>) {
-    debts.update(list => list.map(d => d.id === id ? { ...d, ...data } : d));
+export async function addDebt(name: string): Promise<number> {
+    const d = await GoCreateDebt(name);
+    const created = d as unknown as Debt;
+    debts.update(list => [...list, { ...created, installments: created.installments ?? [] }]);
+    return created.id;
 }
 
-export function deleteDebt(id: number) {
+export async function updateDebt(id: number, data: Partial<Omit<Debt, 'id'>>) {
+    let current: Debt | undefined;
+    debts.subscribe(list => { current = list.find(d => d.id === id); })();
+    if (!current) return;
+    const merged = { ...current, ...data };
+    await GoUpdateDebt(id, merged.name, merged.amount, merged.notes, merged.installments as any);
+    debts.update(list => list.map(d => d.id === id ? merged : d));
+}
+
+export async function deleteDebt(id: number) {
+    await GoDeleteDebt(id);
     debts.update(list => list.filter(d => d.id !== id));
 }
 

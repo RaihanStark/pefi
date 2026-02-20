@@ -17,6 +17,22 @@ type Category struct {
 	Name string `json:"name"`
 }
 
+type Debt struct {
+	ID     int64  `json:"id"`
+	Name   string `json:"name"`
+	Amount int64  `json:"amount"`
+	Notes  string `json:"notes"`
+}
+
+type Installment struct {
+	ID       int64  `json:"id"`
+	DebtID   int64  `json:"debtId"`
+	DueDate  string `json:"dueDate"`
+	Amount   int64  `json:"amount"`
+	Status   string `json:"status"`
+	PaidDate string `json:"paidDate"`
+}
+
 type Transaction struct {
 	ID        int64  `json:"id"`
 	AccountID int64  `json:"accountId"`

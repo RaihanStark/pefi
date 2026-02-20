@@ -49,7 +49,7 @@
         formInstallments = formInstallments.filter((_, i) => i !== idx);
     }
 
-    function saveEdit() {
+    async function saveEdit() {
         if (!debt) return;
         const amount = hasInstallments ? installmentTotal : (parseInt(formAmount) || 0);
         const installments: Installment[] = formInstallments.map((r, i) => {
@@ -58,10 +58,10 @@
                 dueDate: r.dueDate,
                 amount: parseInt(r.amount) || 0,
                 status: existing?.status ?? 'upcoming',
-                ...(existing?.paidDate ? { paidDate: existing.paidDate } : {}),
+                paidDate: existing?.paidDate ?? '',
             };
         });
-        updateDebt(debtId, {
+        await updateDebt(debtId, {
             name: formName.trim(),
             amount,
             notes: formNotes,
@@ -70,17 +70,17 @@
         editing = false;
     }
 
-    function togglePaid(idx: number) {
+    async function togglePaid(idx: number) {
         if (!debt) return;
         const inst = debt.installments[idx];
         const updated = [...debt.installments];
         if (inst.status === 'paid') {
-            updated[idx] = { ...inst, status: 'upcoming', paidDate: undefined };
+            updated[idx] = { ...inst, status: 'upcoming', paidDate: '' };
         } else {
             const today = new Date().toISOString().slice(0, 10);
             updated[idx] = { ...inst, status: 'paid', paidDate: today };
         }
-        updateDebt(debtId, { installments: updated });
+        await updateDebt(debtId, { installments: updated });
     }
 
     function statusColor(status: string): string {
