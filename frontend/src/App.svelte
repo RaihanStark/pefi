@@ -9,10 +9,11 @@
     import BillDetail from './lib/BillDetail.svelte';
     import BillModal from './lib/BillModal.svelte';
     import TimelineGlobal from './lib/TimelineGlobal.svelte';
+    import Statement from './lib/Statement.svelte';
     import { accounts, debts, debtRemaining, bills, addAccount, addDebt, updateAccount, updateDebt, deleteAccount, deleteDebt, addBill, updateBill, deleteBill, loadAccounts, loadDebts, loadBills, loadAllTransactions, loadCategories, formatRupiah } from './lib/stores';
     import type { Account, Bill } from './lib/stores';
 
-    let activeTab: 'overview' | 'timeline' = 'overview';
+    let activeTab: 'overview' | 'timeline' | 'statement' = 'overview';
     let activeView: 'transactions' | 'debts' | 'bills' = 'transactions';
     let selectedItem = '';
     let selectedId: number = 0;
@@ -189,6 +190,11 @@
             {activeTab === 'timeline' ? 'bg-[#1a1a1a] text-[#ff8c00] border-b-2 border-b-[#ff8c00]' : 'bg-transparent text-[#888] hover:text-[#e0e0e0]'}"
             on:click={() => activeTab = 'timeline'}
         >TIMELINE</button>
+        <button
+            class="px-4 py-1.5 text-xs tracking-wider border-none cursor-pointer transition-colors
+            {activeTab === 'statement' ? 'bg-[#1a1a1a] text-[#ff8c00] border-b-2 border-b-[#ff8c00]' : 'bg-transparent text-[#888] hover:text-[#e0e0e0]'}"
+            on:click={() => activeTab = 'statement'}
+        >STATEMENT</button>
     </div>
 
     {#if activeTab === 'overview'}
@@ -210,8 +216,10 @@
                 {/if}
             </div>
         {/if}
-    {:else}
+    {:else if activeTab === 'timeline'}
         <TimelineGlobal />
+    {:else}
+        <Statement />
     {/if}
 
     <!-- Status Bar -->
@@ -221,7 +229,7 @@
         <div class="px-3 py-1 border-r border-[#222] text-[#888]">DEBT <span class="text-[#cc3333]">{formatRupiah(Math.abs(totalDebt))}</span></div>
         <div class="px-3 py-1 border-r border-[#222] text-[#888]">BILLS <span class="text-[#ff8c00]">{formatRupiah(totalBills)}<span class="text-[#555]">/mo</span></span></div>
         <div class="px-3 py-1 text-[#888]">NET <span class="{net < 0 ? 'text-[#cc3333]' : 'text-[#33cc33]'} font-bold">{formatRupiah(net)}</span></div>
-        <div class="ml-auto px-3 py-1 text-[#555]">v1.2.1</div>
+        <div class="ml-auto px-3 py-1 text-[#555]">v1.3.0-alpha</div>
     </div>
 </div>
 
