@@ -6,7 +6,7 @@
     import AccountModal from './lib/AccountModal.svelte';
     import DebtModal from './lib/DebtModal.svelte';
     import Settings from './lib/Settings.svelte';
-    import { accounts, debts, debtRemaining, addAccount, addDebt, updateAccount, deleteAccount, loadAccounts, loadDebts, loadCategories, formatRupiah } from './lib/stores';
+    import { accounts, debts, debtRemaining, addAccount, addDebt, updateAccount, deleteAccount, deleteDebt, loadAccounts, loadDebts, loadCategories, formatRupiah } from './lib/stores';
     import type { Account } from './lib/stores';
 
     let activeView: 'transactions' | 'debts' = 'transactions';
@@ -78,17 +78,25 @@
         showDebtModal = false;
     }
 
-    function handleContextDelete(e: CustomEvent<{ id: number; name: string }>) {
+    let deleteTargetSection = '';
+
+    function handleContextDelete(e: CustomEvent<{ id: number; name: string; section: string }>) {
         deleteTargetId = e.detail.id;
         deleteTargetName = e.detail.name;
+        deleteTargetSection = e.detail.section;
         showDeleteConfirm = true;
     }
 
     async function doDelete() {
-        await deleteAccount(deleteTargetId);
+        if (deleteTargetSection === 'Debts') {
+            await deleteDebt(deleteTargetId);
+        } else {
+            await deleteAccount(deleteTargetId);
+        }
         if (selectedId === deleteTargetId) {
             selectedId = 0;
             selectedItem = '';
+            activeView = 'transactions';
         }
         showDeleteConfirm = false;
     }
@@ -165,7 +173,7 @@
         <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
         <div class="bg-[#111] border border-[#333] w-72" on:click|stopPropagation>
             <div class="bg-[#1a1a1a] px-3 py-1.5 border-b border-[#222]">
-                <span class="text-[#cc3333] font-bold text-xs tracking-wider">DELETE ACCOUNT</span>
+                <span class="text-[#cc3333] font-bold text-xs tracking-wider">DELETE {deleteTargetSection === 'Debts' ? 'DEBT' : 'ACCOUNT'}</span>
             </div>
             <div class="p-3 text-xs">
                 <p class="text-[#e0e0e0] mb-3">Delete <span class="text-[#ff8c00] font-bold">{deleteTargetName}</span>? This cannot be undone.</p>

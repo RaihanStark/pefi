@@ -6,8 +6,8 @@
         select: { section: string; item: string; id: number };
         addAccount: void;
         addDebt: void;
-        rename: { id: number; name: string };
-        delete: { id: number; name: string };
+        rename: { id: number; name: string; section: string };
+        delete: { id: number; name: string; section: string };
         settings: void;
     }>();
 
@@ -22,11 +22,11 @@
     let isResizing = false;
 
     // Context menu state
-    let contextMenu: { x: number; y: number; id: number; name: string } | null = null;
+    let contextMenu: { x: number; y: number; id: number; name: string; section: string } | null = null;
 
-    function openContext(e: MouseEvent, id: number, name: string) {
+    function openContext(e: MouseEvent, id: number, name: string, section: string) {
         e.preventDefault();
-        contextMenu = { x: e.clientX, y: e.clientY, id, name };
+        contextMenu = { x: e.clientX, y: e.clientY, id, name, section };
     }
 
     function closeContext() {
@@ -35,13 +35,13 @@
 
     function handleRename() {
         if (!contextMenu) return;
-        dispatch('rename', { id: contextMenu.id, name: contextMenu.name });
+        dispatch('rename', { id: contextMenu.id, name: contextMenu.name, section: contextMenu.section });
         contextMenu = null;
     }
 
     function handleDelete() {
         if (!contextMenu) return;
-        dispatch('delete', { id: contextMenu.id, name: contextMenu.name });
+        dispatch('delete', { id: contextMenu.id, name: contextMenu.name, section: contextMenu.section });
         contextMenu = null;
     }
 
@@ -98,7 +98,7 @@
                             class="flex items-center justify-between w-full text-left border-none cursor-pointer py-1 pl-6 pr-3 transition-colors text-xs
                             {selectedId === item.id ? 'bg-[#1a2332] text-[#ff8c00] border-l-2 border-l-[#ff8c00]' : 'bg-transparent hover:bg-[#1a1a1a] text-[#ccc] border-l-2 border-l-transparent'}"
                             on:click={() => { selectedId = item.id; dispatch('select', { section: section.key, item: item.name, id: item.id }); }}
-                            on:contextmenu={(e) => openContext(e, item.id, item.name)}
+                            on:contextmenu={(e) => openContext(e, item.id, item.name, section.key)}
                         >
                             <span>{item.name}</span>
                             <span class="font-mono {item.balance < 0 ? 'text-[#cc3333]' : 'text-[#33cc33]'}">{formatRupiah(item.balance)}</span>
