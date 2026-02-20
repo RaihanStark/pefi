@@ -220,7 +220,7 @@
         <div class="px-3 py-1 border-r border-[#222] text-[#888]">DEBT <span class="text-[#cc3333]">{formatRupiah(Math.abs(totalDebt))}</span></div>
         <div class="px-3 py-1 border-r border-[#222] text-[#888]">BILLS <span class="text-[#ff8c00]">{formatRupiah(totalBills)}<span class="text-[#555]">/mo</span></span></div>
         <div class="px-3 py-1 text-[#888]">NET <span class="{net < 0 ? 'text-[#cc3333]' : 'text-[#33cc33]'} font-bold">{formatRupiah(net)}</span></div>
-        <div class="ml-auto px-3 py-1 text-[#555]">v1.1.0</div>
+        <div class="ml-auto px-3 py-1 text-[#555]">v1.2.0</div>
     </div>
 </div>
 
