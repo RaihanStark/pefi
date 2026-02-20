@@ -6,6 +6,7 @@ import (
 	"log"
 
 	"pefi/internal/account"
+	"pefi/internal/bill"
 	"pefi/internal/category"
 	"pefi/internal/debt"
 	db "pefi/internal/db"
@@ -112,4 +113,22 @@ func (a *App) UpdateDebt(id int64, name string, amount int64, notes string, inst
 
 func (a *App) DeleteDebt(id int64) error {
 	return debt.Delete(a.conn, id)
+}
+
+// Bills
+
+func (a *App) GetBills() ([]bill.BillData, error) {
+	return bill.GetAll(a.conn)
+}
+
+func (a *App) CreateBill(name string, amount int64, dueDay int64) (bill.BillData, error) {
+	return bill.Create(a.conn, name, amount, dueDay)
+}
+
+func (a *App) UpdateBill(id int64, name string, amount int64, dueDay int64) error {
+	return bill.Update(a.conn, id, name, amount, dueDay)
+}
+
+func (a *App) DeleteBill(id int64) error {
+	return bill.Delete(a.conn, id)
 }

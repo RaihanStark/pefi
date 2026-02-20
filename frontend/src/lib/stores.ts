@@ -16,6 +16,10 @@ import {
     CreateDebt as GoCreateDebt,
     UpdateDebt as GoUpdateDebt,
     DeleteDebt as GoDeleteDebt,
+    GetBills,
+    CreateBill as GoCreateBill,
+    UpdateBill as GoUpdateBill,
+    DeleteBill as GoDeleteBill,
 } from '../../wailsjs/go/main/App';
 
 export interface Account {
@@ -220,6 +224,39 @@ export function buildTimelineEntries(
     );
 
     return [...txEntries, ...instEntries].sort((a, b) => b.date.localeCompare(a.date));
+}
+
+// Bills
+
+export interface Bill {
+    id: number;
+    name: string;
+    amount: number;
+    dueDay: number;
+}
+
+export const bills = writable<Bill[]>([]);
+
+export async function loadBills() {
+    const data = await GetBills();
+    bills.set((data ?? []) as Bill[]);
+}
+
+export async function addBill(name: string, amount: number, dueDay: number): Promise<number> {
+    const b = await GoCreateBill(name, amount, dueDay);
+    const created = b as unknown as Bill;
+    await loadBills();
+    return created.id;
+}
+
+export async function updateBill(id: number, name: string, amount: number, dueDay: number) {
+    await GoUpdateBill(id, name, amount, dueDay);
+    await loadBills();
+}
+
+export async function deleteBill(id: number) {
+    await GoDeleteBill(id);
+    await loadBills();
 }
 
 export function formatRupiah(amount: number): string {

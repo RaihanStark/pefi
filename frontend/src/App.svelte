@@ -6,12 +6,14 @@
     import AccountModal from './lib/AccountModal.svelte';
     import DebtModal from './lib/DebtModal.svelte';
     import Settings from './lib/Settings.svelte';
+    import BillDetail from './lib/BillDetail.svelte';
+    import BillModal from './lib/BillModal.svelte';
     import TimelineGlobal from './lib/TimelineGlobal.svelte';
-    import { accounts, debts, debtRemaining, addAccount, addDebt, updateAccount, updateDebt, deleteAccount, deleteDebt, loadAccounts, loadDebts, loadAllTransactions, loadCategories, formatRupiah } from './lib/stores';
-    import type { Account } from './lib/stores';
+    import { accounts, debts, debtRemaining, bills, addAccount, addDebt, updateAccount, updateDebt, deleteAccount, deleteDebt, addBill, updateBill, deleteBill, loadAccounts, loadDebts, loadBills, loadAllTransactions, loadCategories, formatRupiah } from './lib/stores';
+    import type { Account, Bill } from './lib/stores';
 
     let activeTab: 'overview' | 'timeline' = 'overview';
-    let activeView: 'transactions' | 'debts' = 'transactions';
+    let activeView: 'transactions' | 'debts' | 'bills' = 'transactions';
     let selectedItem = '';
     let selectedId: number = 0;
 
@@ -22,6 +24,11 @@
 
     // Debt modal
     let showDebtModal = false;
+
+    // Bill modal
+    let showBillModal = false;
+    let billModalMode: 'create' | 'edit' = 'create';
+    let editingBill: Bill | null = null;
 
     // Confirm delete
     let showDeleteConfirm = false;
@@ -37,7 +44,7 @@
     let renameName = '';
 
     onMount(async () => {
-        await Promise.all([loadAccounts(), loadDebts(), loadAllTransactions(), loadCategories()]);
+        await Promise.all([loadAccounts(), loadDebts(), loadBills(), loadAllTransactions(), loadCategories()]);
     });
 
     // Lazy refresh when switching to timeline tab
@@ -48,7 +55,7 @@
     function handleSelect(e: CustomEvent<{ section: string; item: string; id: number }>) {
         selectedItem = e.detail.item;
         selectedId = e.detail.id;
-        activeView = e.detail.section === 'Debts' ? 'debts' : 'transactions';
+        activeView = e.detail.section === 'Debts' ? 'debts' : e.detail.section === 'Bills' ? 'bills' : 'transactions';
     }
 
     function openCreate() {
@@ -85,6 +92,33 @@
         showDebtModal = false;
     }
 
+    function openBillCreate() {
+        billModalMode = 'create';
+        editingBill = null;
+        showBillModal = true;
+    }
+
+    function openBillEdit(e: CustomEvent<Bill>) {
+        billModalMode = 'edit';
+        editingBill = e.detail;
+        showBillModal = true;
+    }
+
+    async function handleBillSave(e: CustomEvent<{ name: string; amount: number; dueDay: number }>) {
+        const { name, amount, dueDay } = e.detail;
+        if (billModalMode === 'create') {
+            const id = await addBill(name, amount, dueDay);
+            selectedId = id;
+            selectedItem = name;
+            activeView = 'bills';
+        } else if (editingBill) {
+            await updateBill(editingBill.id, name, amount, dueDay);
+            if (selectedId === editingBill.id) selectedItem = name;
+        }
+        showBillModal = false;
+        editingBill = null;
+    }
+
     let deleteTargetSection = '';
 
     function handleContextDelete(e: CustomEvent<{ id: number; name: string; section: string }>) {
@@ -97,6 +131,8 @@
     async function doDelete() {
         if (deleteTargetSection === 'Debts') {
             await deleteDebt(deleteTargetId);
+        } else if (deleteTargetSection === 'Bills') {
+            await deleteBill(deleteTargetId);
         } else {
             await deleteAccount(deleteTargetId);
         }
@@ -121,6 +157,9 @@
         if (renameName.trim()) {
             if (renameSection === 'Debts') {
                 await updateDebt(renameId, { name: renameName.trim() });
+            } else if (renameSection === 'Bills') {
+                const b = $bills.find(b => b.id === renameId);
+                if (b) await updateBill(renameId, renameName.trim(), b.amount, b.dueDay);
             } else {
                 await updateAccount(renameId, { name: renameName.trim() });
             }
@@ -131,6 +170,7 @@
 
     $: totalBalance = $accounts.filter(a => a.type === 'bank').reduce((s, a) => s + a.balance, 0);
     $: totalDebt = $debts.reduce((s, d) => s + debtRemaining(d), 0);
+    $: totalBills = $bills.reduce((s, b) => s + b.amount, 0);
     $: net = totalBalance - totalDebt;
     $: acctCount = $accounts.length;
 </script>
@@ -157,8 +197,10 @@
             </div>
         {:else}
             <div class="flex flex-1 min-h-0">
-                <Sidebar on:select={handleSelect} on:addAccount={openCreate} on:addDebt={() => showDebtModal = true} on:rename={handleContextRename} on:delete={handleContextDelete} on:settings={() => showSettings = true} bind:selectedId />
-                {#if activeView === 'debts' && selectedId}
+                <Sidebar on:select={handleSelect} on:addAccount={openCreate} on:addDebt={() => showDebtModal = true} on:addBill={openBillCreate} on:rename={handleContextRename} on:delete={handleContextDelete} on:settings={() => showSettings = true} bind:selectedId />
+                {#if activeView === 'bills' && selectedId}
+                    <BillDetail billId={selectedId} on:edit={openBillEdit} />
+                {:else if activeView === 'debts' && selectedId}
                     <DebtDetail debtId={selectedId} />
                 {:else if selectedId}
                     <Timeline accountId={selectedId} accountName={selectedItem} />
@@ -176,6 +218,7 @@
         <div class="px-3 py-1 border-r border-[#222] text-[#888]">ACCT <span class="text-[#e0e0e0]">{acctCount}</span></div>
         <div class="px-3 py-1 border-r border-[#222] text-[#888]">BAL <span class="text-[#33cc33]">{formatRupiah(totalBalance)}</span></div>
         <div class="px-3 py-1 border-r border-[#222] text-[#888]">DEBT <span class="text-[#cc3333]">{formatRupiah(Math.abs(totalDebt))}</span></div>
+        <div class="px-3 py-1 border-r border-[#222] text-[#888]">BILLS <span class="text-[#ff8c00]">{formatRupiah(totalBills)}<span class="text-[#555]">/mo</span></span></div>
         <div class="px-3 py-1 text-[#888]">NET <span class="{net < 0 ? 'text-[#cc3333]' : 'text-[#33cc33]'} font-bold">{formatRupiah(net)}</span></div>
         <div class="ml-auto px-3 py-1 text-[#555]">v1.1.0</div>
     </div>
@@ -196,6 +239,16 @@
     <DebtModal
         on:save={handleDebtSave}
         on:close={() => showDebtModal = false}
+    />
+{/if}
+
+<!-- Bill Modal -->
+{#if showBillModal}
+    <BillModal
+        mode={billModalMode}
+        bill={editingBill}
+        on:save={handleBillSave}
+        on:close={() => { showBillModal = false; editingBill = null; }}
     />
 {/if}
 

@@ -1,11 +1,12 @@
 <script lang="ts">
     import { createEventDispatcher } from 'svelte';
-    import { bankAccounts, debts, debtRemaining, formatRupiah } from './stores';
+    import { bankAccounts, debts, debtRemaining, bills, formatRupiah } from './stores';
 
     const dispatch = createEventDispatcher<{
         select: { section: string; item: string; id: number };
         addAccount: void;
         addDebt: void;
+        addBill: void;
         rename: { id: number; name: string; section: string };
         delete: { id: number; name: string; section: string };
         settings: void;
@@ -14,6 +15,7 @@
     let sections = [
         { key: 'Bank Accounts', open: true },
         { key: 'Debts', open: true },
+        { key: 'Bills', open: true },
     ];
 
     export let selectedId: number = 0;
@@ -65,11 +67,13 @@
         window.addEventListener('mouseup', onMouseUp);
     }
 
-    type SidebarItem = { id: number; name: string; balance: number };
+    type SidebarItem = { id: number; name: string; balance: number; suffix?: string };
     let itemsBySection: Record<string, SidebarItem[]> = {};
+
     $: itemsBySection = {
         'Bank Accounts': $bankAccounts.map(a => ({ id: a.id, name: a.name, balance: a.balance })),
         'Debts': $debts.map(d => ({ id: d.id, name: d.name, balance: -debtRemaining(d) })),
+        'Bills': $bills.map(b => ({ id: b.id, name: b.name, balance: -b.amount, suffix: '/mo' })),
     };
 </script>
 
@@ -98,14 +102,18 @@
                             on:contextmenu={(e) => openContext(e, item.id, item.name, section.key)}
                         >
                             <span>{item.name}</span>
-                            <span class="font-mono {item.balance < 0 ? 'text-[#cc3333]' : 'text-[#33cc33]'}">{formatRupiah(item.balance)}</span>
+                            <span class="font-mono {section.key === 'Bills' ? 'text-[#ff8c00]' : item.balance < 0 ? 'text-[#cc3333]' : 'text-[#33cc33]'}">{section.key === 'Bills' ? formatRupiah(Math.abs(item.balance)) : formatRupiah(item.balance)}{item.suffix ?? ''}</span>
                         </button>
                     {/each}
                     <button
                         class="flex items-center w-full text-left border-none cursor-pointer py-1 pl-6 pr-3 transition-colors text-xs text-[#555] hover:text-[#ff8c00] bg-transparent border-l-2 border-l-transparent"
-                        on:click={() => dispatch(section.key === 'Bank Accounts' ? 'addAccount' : 'addDebt')}
+                        on:click={() => {
+                            if (section.key === 'Bank Accounts') dispatch('addAccount');
+                            else if (section.key === 'Debts') dispatch('addDebt');
+                            else if (section.key === 'Bills') dispatch('addBill');
+                        }}
                     >
-                        <span>+ {section.key === 'Bank Accounts' ? 'New Bank Account' : 'New Debt'}</span>
+                        <span>+ New {section.key === 'Bank Accounts' ? 'Bank Account' : section.key === 'Debts' ? 'Debt' : 'Bill'}</span>
                     </button>
                 {/if}
             {/each}

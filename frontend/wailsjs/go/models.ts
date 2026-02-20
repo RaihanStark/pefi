@@ -21,6 +21,29 @@ export namespace account {
 
 }
 
+export namespace bill {
+	
+	export class BillData {
+	    id: number;
+	    name: string;
+	    amount: number;
+	    dueDay: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new BillData(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.amount = source["amount"];
+	        this.dueDay = source["dueDay"];
+	    }
+	}
+
+}
+
 export namespace debt {
 	
 	export class InstallmentData {
