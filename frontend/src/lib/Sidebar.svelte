@@ -65,15 +65,12 @@
         window.addEventListener('mouseup', onMouseUp);
     }
 
-    function getItems(key: string) {
-        if (key === 'Bank Accounts') return $bankAccounts;
-        if (key === 'Debts') return $debts.map(d => ({
-            id: d.id,
-            name: d.name,
-            balance: -debtRemaining(d),
-        }));
-        return [];
-    }
+    type SidebarItem = { id: number; name: string; balance: number };
+    let itemsBySection: Record<string, SidebarItem[]> = {};
+    $: itemsBySection = {
+        'Bank Accounts': $bankAccounts.map(a => ({ id: a.id, name: a.name, balance: a.balance })),
+        'Debts': $debts.map(d => ({ id: d.id, name: d.name, balance: -debtRemaining(d) })),
+    };
 </script>
 
 <svelte:window on:click={closeContext} />
@@ -93,7 +90,7 @@
                     {section.key.toUpperCase()}
                 </button>
                 {#if section.open}
-                    {#each getItems(section.key) as item}
+                    {#each (itemsBySection[section.key] ?? []) as item}
                         <button
                             class="flex items-center justify-between w-full text-left border-none cursor-pointer py-1 pl-6 pr-3 transition-colors text-xs
                             {selectedId === item.id ? 'bg-[#1a2332] text-[#ff8c00] border-l-2 border-l-[#ff8c00]' : 'bg-transparent hover:bg-[#1a1a1a] text-[#ccc] border-l-2 border-l-transparent'}"
