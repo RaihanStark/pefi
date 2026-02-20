@@ -67,8 +67,8 @@ export async function loadCategories() {
 
 // Account CRUD
 export async function addAccount(name: string, type: 'bank' | 'debt', balance: number) {
-    const acc = await GoCreateAccount(name, type, balance);
-    accounts.update(list => [...list, acc as Account]);
+    await GoCreateAccount(name, type, balance);
+    await loadAccounts();
 }
 
 export async function updateAccount(id: number, data: Partial<Omit<Account, 'id'>>) {
@@ -79,47 +79,40 @@ export async function updateAccount(id: number, data: Partial<Omit<Account, 'id'
     const type = data.type ?? current.type;
     const balance = data.balance ?? current.balance;
     await GoUpdateAccount(id, name, type, balance);
-    accounts.update(list => list.map(a => a.id === id ? { ...a, ...data } : a));
+    await loadAccounts();
 }
 
 export async function deleteAccount(id: number) {
     await GoDeleteAccount(id);
-    accounts.update(list => list.filter(a => a.id !== id));
+    await loadAccounts();
     transactions.update(list => list.filter(t => t.accountId !== id));
 }
 
 // Transaction CRUD
 export async function addTransaction(tx: Omit<Transaction, 'id'>) {
-    const created = await GoCreateTransaction(tx.accountId, tx.date, tx.name, tx.amount, tx.category, tx.notes);
-    transactions.update(list => [...list, created as Transaction]);
-    // Refresh accounts to get updated balance
-    await loadAccounts();
+    await GoCreateTransaction(tx.accountId, tx.date, tx.name, tx.amount, tx.category, tx.notes);
+    await Promise.all([loadAccounts(), loadTransactions(tx.accountId)]);
 }
 
-export async function deleteTransaction(id: number) {
+export async function deleteTransaction(id: number, accountId: number) {
     await GoDeleteTransaction(id);
-    transactions.update(list => list.filter(t => t.id !== id));
-    await loadAccounts();
+    await Promise.all([loadAccounts(), loadTransactions(accountId)]);
 }
 
 // Category CRUD
 export async function addCategory(type: 'expense' | 'income', name: string) {
     await GoAddCategory(type, name);
-    const store = type === 'expense' ? expenseCategories : incomeCategories;
-    store.update(list => list.includes(name) ? list : [...list, name]);
+    await loadCategories();
 }
 
 export async function renameCategory(type: 'expense' | 'income', oldName: string, newName: string) {
     await GoRenameCategory(type, oldName, newName);
-    const store = type === 'expense' ? expenseCategories : incomeCategories;
-    store.update(list => list.map(c => c === oldName ? newName : c));
-    transactions.update(list => list.map(t => t.category === oldName ? { ...t, category: newName } : t));
+    await loadCategories();
 }
 
 export async function deleteCategory(type: 'expense' | 'income', name: string) {
     await GoDeleteCategory(type, name);
-    const store = type === 'expense' ? expenseCategories : incomeCategories;
-    store.update(list => list.filter(c => c !== name));
+    await loadCategories();
 }
 
 // Debts
@@ -157,7 +150,7 @@ export async function loadDebts() {
 export async function addDebt(name: string): Promise<number> {
     const d = await GoCreateDebt(name);
     const created = d as unknown as Debt;
-    debts.update(list => [...list, { ...created, installments: created.installments ?? [] }]);
+    await loadDebts();
     return created.id;
 }
 
@@ -167,12 +160,12 @@ export async function updateDebt(id: number, data: Partial<Omit<Debt, 'id'>>) {
     if (!current) return;
     const merged = { ...current, ...data };
     await GoUpdateDebt(id, merged.name, merged.amount, merged.notes, merged.installments as any);
-    debts.update(list => list.map(d => d.id === id ? merged : d));
+    await loadDebts();
 }
 
 export async function deleteDebt(id: number) {
     await GoDeleteDebt(id);
-    debts.update(list => list.filter(d => d.id !== id));
+    await loadDebts();
 }
 
 export function formatRupiah(amount: number): string {

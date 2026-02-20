@@ -59,7 +59,7 @@
     }
 
     async function handleDeleteTx(id: number) {
-        await deleteTransaction(id);
+        await deleteTransaction(id, accountId);
         selectedTx = null;
     }
 
