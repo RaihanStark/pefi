@@ -6,6 +6,7 @@
   "frontend:build": "npm run build",
   "frontend:dev:watcher": "npm run dev",
   "frontend:dev:serverUrl": "auto",
+  "ldflags": "-X 'pefi/internal/db.Mode=prod'",
   "author": {
     "name": "Raihan Yudo Saputra",
     "email": "raihanyudosaputra30@gmail.com"

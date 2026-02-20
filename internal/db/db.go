@@ -16,7 +16,12 @@ import (
 //go:embed migrations/*.sql
 var migrationsFS embed.FS
 
+var Mode = "dev"
+
 func Path() (string, error) {
+	if Mode == "dev" {
+		return "pefi-dev.db", nil
+	}
 	configDir, err := os.UserConfigDir()
 	if err != nil {
 		return "", fmt.Errorf("get config dir: %w", err)
