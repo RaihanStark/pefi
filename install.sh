@@ -4,10 +4,8 @@ set -e
 DEST="$HOME/pefi"
 SRC="build/bin/pefi"
 
-if [ ! -f "$SRC" ]; then
-    echo "Build not found. Run 'wails build' first."
-    exit 1
-fi
+echo "Building..."
+wails build
 
 mkdir -p "$(dirname "$DEST")"
 cp -f "$SRC" "$DEST"
