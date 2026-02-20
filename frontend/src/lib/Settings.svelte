@@ -28,9 +28,9 @@
         editingValue = name;
     }
 
-    function saveEdit(oldName: string) {
+    async function saveEdit(oldName: string) {
         if (editingValue.trim() && editingValue.trim() !== oldName) {
-            renameCategory(activeTab, oldName, editingValue.trim());
+            await renameCategory(activeTab, oldName, editingValue.trim());
         }
         editingIdx = null;
         editingValue = '';
@@ -41,14 +41,14 @@
         editingValue = '';
     }
 
-    function handleAdd() {
+    async function handleAdd() {
         if (!newName.trim()) return;
-        addCategory(activeTab, newName.trim());
+        await addCategory(activeTab, newName.trim());
         newName = '';
     }
 
-    function handleDelete(name: string) {
-        deleteCategory(activeTab, name);
+    async function handleDelete(name: string) {
+        await deleteCategory(activeTab, name);
         if (editingIdx !== null) cancelEdit();
     }
 

@@ -3,10 +3,10 @@
     import { bankAccounts, debtAccounts, formatRupiah } from './stores';
 
     const dispatch = createEventDispatcher<{
-        select: { section: string; item: string; id: string };
+        select: { section: string; item: string; id: number };
         add: void;
-        rename: { id: string; name: string };
-        delete: { id: string; name: string };
+        rename: { id: number; name: string };
+        delete: { id: number; name: string };
         settings: void;
     }>();
 
@@ -15,15 +15,15 @@
         { key: 'Debts', open: true },
     ];
 
-    export let selectedId = '';
+    export let selectedId: number = 0;
 
     let width = 280;
     let isResizing = false;
 
     // Context menu state
-    let contextMenu: { x: number; y: number; id: string; name: string } | null = null;
+    let contextMenu: { x: number; y: number; id: number; name: string } | null = null;
 
-    function openContext(e: MouseEvent, id: string, name: string) {
+    function openContext(e: MouseEvent, id: number, name: string) {
         e.preventDefault();
         contextMenu = { x: e.clientX, y: e.clientY, id, name };
     }

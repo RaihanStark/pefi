@@ -1,43 +1,28 @@
 import { writable, derived } from 'svelte/store';
+import {
+    GetAccounts,
+    CreateAccount as GoCreateAccount,
+    UpdateAccount as GoUpdateAccount,
+    DeleteAccount as GoDeleteAccount,
+    GetTransactions,
+    CreateTransaction as GoCreateTransaction,
+    DeleteTransaction as GoDeleteTransaction,
+    GetCategories,
+    AddCategory as GoAddCategory,
+    RenameCategory as GoRenameCategory,
+    DeleteCategory as GoDeleteCategory,
+} from '../../wailsjs/go/main/App';
 
 export interface Account {
-    id: string;
+    id: number;
     name: string;
     type: 'bank' | 'debt';
     balance: number;
 }
 
-let nextId = 1;
-function genId(): string {
-    return `acc-${nextId++}`;
-}
-
-export const accounts = writable<Account[]>([
-    { id: genId(), name: 'Checking', type: 'bank', balance: 2450000 },
-    { id: genId(), name: 'Savings', type: 'bank', balance: 8200000 },
-    { id: genId(), name: 'Peer To Peer', type: 'debt', balance: -35000000 },
-]);
-
-export const bankAccounts = derived(accounts, $a => $a.filter(a => a.type === 'bank'));
-export const debtAccounts = derived(accounts, $a => $a.filter(a => a.type === 'debt'));
-
-export function addAccount(name: string, type: 'bank' | 'debt', balance: number) {
-    accounts.update(list => [...list, { id: genId(), name, type, balance }]);
-}
-
-export function updateAccount(id: string, data: Partial<Omit<Account, 'id'>>) {
-    accounts.update(list => list.map(a => a.id === id ? { ...a, ...data } : a));
-}
-
-export function deleteAccount(id: string) {
-    accounts.update(list => list.filter(a => a.id !== id));
-}
-
-// Transactions
-
 export interface Transaction {
-    id: string;
-    accountId: string;
+    id: number;
+    accountId: number;
     date: string;
     name: string;
     amount: number;
@@ -45,54 +30,111 @@ export interface Transaction {
     notes: string;
 }
 
-let nextTxId = 1;
-function genTxId(): string {
-    return `tx-${nextTxId++}`;
+// Stores
+export const accounts = writable<Account[]>([]);
+export const transactions = writable<Transaction[]>([]);
+export const expenseCategories = writable<string[]>([]);
+export const incomeCategories = writable<string[]>([]);
+
+export const bankAccounts = derived(accounts, $a => $a.filter(a => a.type === 'bank'));
+export const debtAccounts = derived(accounts, $a => $a.filter(a => a.type === 'debt'));
+
+// Debt ID counter for in-memory debt accounts
+let nextDebtId = -1;
+
+// Load functions
+export async function loadAccounts() {
+    const data = await GetAccounts();
+    accounts.update(current => {
+        const debts = current.filter(a => a.type === 'debt');
+        return [...data as Account[], ...debts];
+    });
 }
 
-export const transactions = writable<Transaction[]>([
-    { id: genTxId(), accountId: 'acc-1', date: '2026-02-20', name: 'Grocery Store', amount: -85420, category: 'Food & Groceries', notes: 'Weekly groceries' },
-    { id: genTxId(), accountId: 'acc-1', date: '2026-02-19', name: 'Salary Deposit', amount: 3200000, category: 'Income', notes: 'Monthly salary Feb 2026' },
-    { id: genTxId(), accountId: 'acc-1', date: '2026-02-18', name: 'Electric Bill', amount: -120000, category: 'Utilities', notes: 'PLN monthly bill' },
-    { id: genTxId(), accountId: 'acc-1', date: '2026-02-17', name: 'Transfer to Savings', amount: -500000, category: 'Transfer', notes: 'Monthly savings allocation' },
-    { id: genTxId(), accountId: 'acc-2', date: '2026-02-17', name: 'Transfer from Checking', amount: 500000, category: 'Transfer', notes: 'Monthly savings allocation' },
-    { id: genTxId(), accountId: 'acc-1', date: '2026-02-12', name: 'Phone Bill', amount: -45000, category: 'Utilities', notes: 'Telkomsel postpaid' },
-    { id: genTxId(), accountId: 'acc-1', date: '2026-02-10', name: 'Freelance Payment', amount: 650000, category: 'Income', notes: 'Logo design project' },
-    { id: genTxId(), accountId: 'acc-1', date: '2026-02-01', name: 'Rent', amount: -800000, category: 'Housing', notes: 'Monthly rent Feb 2026' },
-]);
-
-export function addTransaction(tx: Omit<Transaction, 'id'>) {
-    transactions.update(list => [...list, { ...tx, id: genTxId() }]);
+export async function loadTransactions(accountId: number) {
+    const data = await GetTransactions(accountId);
+    transactions.update(current => {
+        const other = current.filter(t => t.accountId !== accountId);
+        return [...other, ...(data as Transaction[])];
+    });
 }
 
-export function deleteTransaction(id: string) {
+export async function loadCategories() {
+    const [expense, income] = await Promise.all([
+        GetCategories('expense'),
+        GetCategories('income'),
+    ]);
+    expenseCategories.set(expense);
+    incomeCategories.set(income);
+}
+
+// Account CRUD
+export async function addAccount(name: string, type: 'bank' | 'debt', balance: number) {
+    if (type === 'debt') {
+        accounts.update(list => [...list, { id: nextDebtId--, name, type, balance }]);
+        return;
+    }
+    const acc = await GoCreateAccount(name, type, balance);
+    accounts.update(list => [...list, acc as Account]);
+}
+
+export async function updateAccount(id: number, data: Partial<Omit<Account, 'id'>>) {
+    if (id < 0) {
+        // In-memory debt account
+        accounts.update(list => list.map(a => a.id === id ? { ...a, ...data } : a));
+        return;
+    }
+    // Need full values for the Go call
+    let current: Account | undefined;
+    accounts.subscribe(list => { current = list.find(a => a.id === id); })();
+    if (!current) return;
+    const name = data.name ?? current.name;
+    const type = data.type ?? current.type;
+    const balance = data.balance ?? current.balance;
+    await GoUpdateAccount(id, name, type, balance);
+    accounts.update(list => list.map(a => a.id === id ? { ...a, ...data } : a));
+}
+
+export async function deleteAccount(id: number) {
+    if (id < 0) {
+        accounts.update(list => list.filter(a => a.id !== id));
+        return;
+    }
+    await GoDeleteAccount(id);
+    accounts.update(list => list.filter(a => a.id !== id));
+    transactions.update(list => list.filter(t => t.accountId !== id));
+}
+
+// Transaction CRUD
+export async function addTransaction(tx: Omit<Transaction, 'id'>) {
+    const created = await GoCreateTransaction(tx.accountId, tx.date, tx.name, tx.amount, tx.category, tx.notes);
+    transactions.update(list => [...list, created as Transaction]);
+    // Refresh accounts to get updated balance
+    await loadAccounts();
+}
+
+export async function deleteTransaction(id: number) {
+    await GoDeleteTransaction(id);
     transactions.update(list => list.filter(t => t.id !== id));
+    await loadAccounts();
 }
 
-// Categories
-
-export const expenseCategories = writable<string[]>([
-    'Food & Groceries', 'Food & Dining', 'Utilities', 'Housing', 'Transfer',
-    'Transport', 'Entertainment', 'Shopping', 'Health', 'Education', 'Other',
-]);
-
-export const incomeCategories = writable<string[]>([
-    'Salary', 'Freelance', 'Investment', 'Transfer', 'Gift', 'Refund', 'Other',
-]);
-
-export function addCategory(type: 'expense' | 'income', name: string) {
+// Category CRUD
+export async function addCategory(type: 'expense' | 'income', name: string) {
+    await GoAddCategory(type, name);
     const store = type === 'expense' ? expenseCategories : incomeCategories;
     store.update(list => list.includes(name) ? list : [...list, name]);
 }
 
-export function renameCategory(type: 'expense' | 'income', oldName: string, newName: string) {
+export async function renameCategory(type: 'expense' | 'income', oldName: string, newName: string) {
+    await GoRenameCategory(type, oldName, newName);
     const store = type === 'expense' ? expenseCategories : incomeCategories;
     store.update(list => list.map(c => c === oldName ? newName : c));
-    // Also update existing transactions
     transactions.update(list => list.map(t => t.category === oldName ? { ...t, category: newName } : t));
 }
 
-export function deleteCategory(type: 'expense' | 'income', name: string) {
+export async function deleteCategory(type: 'expense' | 'income', name: string) {
+    await GoDeleteCategory(type, name);
     const store = type === 'expense' ? expenseCategories : incomeCategories;
     store.update(list => list.filter(c => c !== name));
 }

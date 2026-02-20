@@ -1,15 +1,16 @@
 <script lang="ts">
+    import { onMount } from 'svelte';
     import Sidebar from './lib/Sidebar.svelte';
     import Timeline from './lib/Timeline.svelte';
     import DebtList from './lib/DebtList.svelte';
     import AccountModal from './lib/AccountModal.svelte';
     import Settings from './lib/Settings.svelte';
-    import { accounts, addAccount, updateAccount, deleteAccount, formatRupiah } from './lib/stores';
+    import { accounts, addAccount, updateAccount, deleteAccount, loadAccounts, loadCategories, formatRupiah } from './lib/stores';
     import type { Account } from './lib/stores';
 
     let activeView: 'transactions' | 'debts' = 'transactions';
     let selectedItem = '';
-    let selectedId = '';
+    let selectedId: number = 0;
 
     // Modal state
     let showModal = false;
@@ -18,7 +19,7 @@
 
     // Confirm delete
     let showDeleteConfirm = false;
-    let deleteTargetId = '';
+    let deleteTargetId: number = 0;
     let deleteTargetName = '';
 
     // Settings
@@ -26,10 +27,14 @@
 
     // Rename
     let showRename = false;
-    let renameId = '';
+    let renameId: number = 0;
     let renameName = '';
 
-    function handleSelect(e: CustomEvent<{ section: string; item: string; id: string }>) {
+    onMount(async () => {
+        await Promise.all([loadAccounts(), loadCategories()]);
+    });
+
+    function handleSelect(e: CustomEvent<{ section: string; item: string; id: number }>) {
         selectedItem = e.detail.item;
         selectedId = e.detail.id;
         activeView = e.detail.section === 'Debts' ? 'debts' : 'transactions';
@@ -50,41 +55,41 @@
         showModal = true;
     }
 
-    function handleSave(e: CustomEvent<{ name: string; type: 'bank' | 'debt'; balance: number }>) {
+    async function handleSave(e: CustomEvent<{ name: string; type: 'bank' | 'debt'; balance: number }>) {
         const { name, type, balance } = e.detail;
         if (modalMode === 'create') {
-            addAccount(name, type, balance);
+            await addAccount(name, type, balance);
         } else if (editingAccount) {
-            updateAccount(editingAccount.id, { name, type, balance });
+            await updateAccount(editingAccount.id, { name, type, balance });
         }
         showModal = false;
         editingAccount = null;
     }
 
-    function handleContextDelete(e: CustomEvent<{ id: string; name: string }>) {
+    function handleContextDelete(e: CustomEvent<{ id: number; name: string }>) {
         deleteTargetId = e.detail.id;
         deleteTargetName = e.detail.name;
         showDeleteConfirm = true;
     }
 
-    function doDelete() {
-        deleteAccount(deleteTargetId);
+    async function doDelete() {
+        await deleteAccount(deleteTargetId);
         if (selectedId === deleteTargetId) {
-            selectedId = '';
+            selectedId = 0;
             selectedItem = '';
         }
         showDeleteConfirm = false;
     }
 
-    function handleContextRename(e: CustomEvent<{ id: string; name: string }>) {
+    function handleContextRename(e: CustomEvent<{ id: number; name: string }>) {
         renameId = e.detail.id;
         renameName = e.detail.name;
         showRename = true;
     }
 
-    function doRename() {
+    async function doRename() {
         if (renameName.trim()) {
-            updateAccount(renameId, { name: renameName.trim() });
+            await updateAccount(renameId, { name: renameName.trim() });
             if (selectedId === renameId) selectedItem = renameName.trim();
         }
         showRename = false;
@@ -106,8 +111,10 @@
             <Sidebar on:select={handleSelect} on:add={openCreate} on:rename={handleContextRename} on:delete={handleContextDelete} on:settings={() => showSettings = true} bind:selectedId />
             {#if activeView === 'debts'}
                 <DebtList account={selectedItem} />
-            {:else}
+            {:else if selectedId}
                 <Timeline accountId={selectedId} accountName={selectedItem} />
+            {:else}
+                <div class="flex-1 flex items-center justify-center text-[#555] text-xs">Select an account</div>
             {/if}
         </div>
     {/if}

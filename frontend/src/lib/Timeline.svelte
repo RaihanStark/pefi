@@ -1,8 +1,8 @@
 <script lang="ts">
-    import { transactions, addTransaction, deleteTransaction, formatRupiah, expenseCategories, incomeCategories } from './stores';
+    import { transactions, addTransaction, deleteTransaction, loadTransactions, formatRupiah, expenseCategories, incomeCategories } from './stores';
     import type { Transaction } from './stores';
 
-    export let accountId: string;
+    export let accountId: number;
     export let accountName: string;
 
     let selectedTx: Transaction | null = null;
@@ -17,6 +17,15 @@
     let formIsExpense = true;
     let showCategoryPicker = false;
 
+    // Load transactions when accountId changes
+    let lastLoadedId: number = 0;
+    $: if (accountId && accountId !== lastLoadedId) {
+        lastLoadedId = accountId;
+        selectedTx = null;
+        showForm = false;
+        loadTransactions(accountId);
+    }
+
     $: filtered = $transactions.filter(t => t.accountId === accountId).sort((a, b) => b.date.localeCompare(a.date));
 
     function resetForm() {
@@ -30,10 +39,10 @@
         showCategoryPicker = false;
     }
 
-    function submitForm() {
+    async function submitForm() {
         const amount = parseInt(formAmount) || 0;
         if (!formName.trim() || !amount) return;
-        addTransaction({
+        await addTransaction({
             accountId,
             date: formDate,
             name: formName.trim(),
@@ -47,6 +56,11 @@
     function pickCategory(cat: string) {
         formCategory = cat;
         showCategoryPicker = false;
+    }
+
+    async function handleDeleteTx(id: number) {
+        await deleteTransaction(id);
+        selectedTx = null;
     }
 
     $: categories = formIsExpense ? $expenseCategories : $incomeCategories;
@@ -205,7 +219,7 @@
 
                 <button
                     class="mt-4 bg-[#1a1a1a] border border-[#cc3333] text-[#cc3333] px-3 py-1.5 cursor-pointer hover:bg-[#cc3333] hover:text-black transition-colors text-xs"
-                    on:click={() => { deleteTransaction(selectedTx.id); selectedTx = null; }}
+                    on:click={() => handleDeleteTx(selectedTx.id)}
                 >Delete Transaction</button>
             </div>
         </div>
