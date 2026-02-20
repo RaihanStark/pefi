@@ -6,7 +6,7 @@
     import AccountModal from './lib/AccountModal.svelte';
     import DebtModal from './lib/DebtModal.svelte';
     import Settings from './lib/Settings.svelte';
-    import { accounts, debts, debtRemaining, addAccount, addDebt, updateAccount, deleteAccount, deleteDebt, loadAccounts, loadDebts, loadCategories, formatRupiah } from './lib/stores';
+    import { accounts, debts, debtRemaining, addAccount, addDebt, updateAccount, updateDebt, deleteAccount, deleteDebt, loadAccounts, loadDebts, loadCategories, formatRupiah } from './lib/stores';
     import type { Account } from './lib/stores';
 
     let activeView: 'transactions' | 'debts' = 'transactions';
@@ -101,15 +101,22 @@
         showDeleteConfirm = false;
     }
 
-    function handleContextRename(e: CustomEvent<{ id: number; name: string }>) {
+    let renameSection = '';
+
+    function handleContextRename(e: CustomEvent<{ id: number; name: string; section: string }>) {
         renameId = e.detail.id;
         renameName = e.detail.name;
+        renameSection = e.detail.section;
         showRename = true;
     }
 
     async function doRename() {
         if (renameName.trim()) {
-            await updateAccount(renameId, { name: renameName.trim() });
+            if (renameSection === 'Debts') {
+                await updateDebt(renameId, { name: renameName.trim() });
+            } else {
+                await updateAccount(renameId, { name: renameName.trim() });
+            }
             if (selectedId === renameId) selectedItem = renameName.trim();
         }
         showRename = false;
@@ -145,7 +152,7 @@
         <div class="px-3 py-1 border-r border-[#222] text-[#888]">BAL <span class="text-[#33cc33]">{formatRupiah(totalBalance)}</span></div>
         <div class="px-3 py-1 border-r border-[#222] text-[#888]">DEBT <span class="text-[#cc3333]">{formatRupiah(Math.abs(totalDebt))}</span></div>
         <div class="px-3 py-1 text-[#888]">NET <span class="{net < 0 ? 'text-[#cc3333]' : 'text-[#33cc33]'} font-bold">{formatRupiah(net)}</span></div>
-        <div class="ml-auto px-3 py-1 text-[#555]">v1.0.1</div>
+        <div class="ml-auto px-3 py-1 text-[#555]">v1.0.2</div>
     </div>
 </div>
 
