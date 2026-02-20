@@ -7,3 +7,24 @@
     src: local(""),
     url("assets/fonts/nunito-v16-latin-regular.woff2") format("woff2");
 }
+
+@layer base {
+    body {
+        font-family: "SF Mono", "Fira Code", "Cascadia Code", "Consolas", monospace;
+        font-size: 13px;
+        background: #0a0a0a;
+        color: #e0e0e0;
+    }
+
+    ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+        background: #111;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: #333;
+        border-radius: 3px;
+    }
+}
