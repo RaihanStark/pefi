@@ -16,6 +16,7 @@
     let activeView: 'transactions' | 'debts' | 'bills' = 'transactions';
     let selectedItem = '';
     let selectedId: number = 0;
+    let selectedSection: string = '';
 
     // Modal state
     let showModal = false;
@@ -197,7 +198,7 @@
             </div>
         {:else}
             <div class="flex flex-1 min-h-0">
-                <Sidebar on:select={handleSelect} on:addAccount={openCreate} on:addDebt={() => showDebtModal = true} on:addBill={openBillCreate} on:rename={handleContextRename} on:delete={handleContextDelete} on:settings={() => showSettings = true} bind:selectedId />
+                <Sidebar on:select={handleSelect} on:addAccount={openCreate} on:addDebt={() => showDebtModal = true} on:addBill={openBillCreate} on:rename={handleContextRename} on:delete={handleContextDelete} on:settings={() => showSettings = true} bind:selectedId bind:selectedSection />
                 {#if activeView === 'bills' && selectedId}
                     <BillDetail billId={selectedId} on:edit={openBillEdit} />
                 {:else if activeView === 'debts' && selectedId}
@@ -220,7 +221,7 @@
         <div class="px-3 py-1 border-r border-[#222] text-[#888]">DEBT <span class="text-[#cc3333]">{formatRupiah(Math.abs(totalDebt))}</span></div>
         <div class="px-3 py-1 border-r border-[#222] text-[#888]">BILLS <span class="text-[#ff8c00]">{formatRupiah(totalBills)}<span class="text-[#555]">/mo</span></span></div>
         <div class="px-3 py-1 text-[#888]">NET <span class="{net < 0 ? 'text-[#cc3333]' : 'text-[#33cc33]'} font-bold">{formatRupiah(net)}</span></div>
-        <div class="ml-auto px-3 py-1 text-[#555]">v1.2.0</div>
+        <div class="ml-auto px-3 py-1 text-[#555]">v1.2.1</div>
     </div>
 </div>
 

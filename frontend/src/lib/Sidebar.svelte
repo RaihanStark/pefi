@@ -19,6 +19,7 @@
     ];
 
     export let selectedId: number = 0;
+    export let selectedSection: string = '';
 
     let width = 280;
     let isResizing = false;
@@ -97,8 +98,8 @@
                     {#each (itemsBySection[section.key] ?? []) as item}
                         <button
                             class="flex items-center justify-between w-full text-left border-none cursor-pointer py-1 pl-6 pr-3 transition-colors text-xs
-                            {selectedId === item.id ? 'bg-[#1a2332] text-[#ff8c00] border-l-2 border-l-[#ff8c00]' : 'bg-transparent hover:bg-[#1a1a1a] text-[#ccc] border-l-2 border-l-transparent'}"
-                            on:click={() => { selectedId = item.id; dispatch('select', { section: section.key, item: item.name, id: item.id }); }}
+                            {selectedId === item.id && selectedSection === section.key ? 'bg-[#1a2332] text-[#ff8c00] border-l-2 border-l-[#ff8c00]' : 'bg-transparent hover:bg-[#1a1a1a] text-[#ccc] border-l-2 border-l-transparent'}"
+                            on:click={() => { selectedId = item.id; selectedSection = section.key; dispatch('select', { section: section.key, item: item.name, id: item.id }); }}
                             on:contextmenu={(e) => openContext(e, item.id, item.name, section.key)}
                         >
                             <span>{item.name}</span>
